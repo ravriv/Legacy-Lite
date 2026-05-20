@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "lglt",
+    "name": "Legacy Lite",
+    "version": "1.0",
+    "mcversion": "1.8.9",
+    "url": "https://www.curseforge.com/minecraft/mc-mods/legacylite",
+    "authorList": ["ravriv"],
+    "description": "Lightweight, fast and focused, built to give you an edge in PvP.",
+    "logoFile": "icon.png"
+  }
+]
