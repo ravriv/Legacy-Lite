@@ -1,0 +1,221 @@
+buildscript {
+    repositories {
+        maven { url "https://maven.minecraftforge.net" }
+        maven { url 'https://repo.spongepowered.org/maven' }
+    }
+    dependencies {
+        classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
+        classpath 'org.spongepowered:mixingradle:0.6-SNAPSHOT'
+    }
+}
+
+plugins {
+    id "java"
+    id "com.github.johnrengelman.shadow" version "2.0.4"
+}
+
+apply plugin: "net.minecraftforge.gradle.forge"
+apply plugin: 'org.spongepowered.mixin'
+
+group = "me.ravriv"
+archivesBaseName = "Legacy Lite"
+
+sourceCompatibility = targetCompatibility = 1.8
+compileJava.options.encoding = "UTF-8"
+
+minecraft {
+    version = "1.8.9-11.15.1.2318-1.8.9"
+    runDir = "run"
+    mappings = "stable_22"
+    makeObfSourceJar = false
+}
+
+configurations {
+    shade
+    compile.extendsFrom(shade)
+}
+
+repositories {
+    maven { url 'https://repo.spongepowered.org/maven/' }
+}
+
+def systemOs = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+
+dependencies {
+    shade('org.spongepowered:mixin:0.7.11-SNAPSHOT') {
+        exclude module: 'launchwrapper'
+        exclude module: 'guava'
+        exclude module: 'gson'
+        exclude module: 'commons-io'
+        exclude module: 'log4j-core'
+    }
+
+    compile 'org.jetbrains:annotations:24.0.1'
+
+    if (systemOs.contains("mac")) {
+        compile 'org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209'
+        compile 'org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209'
+        compile 'org.lwjgl.lwjgl:lwjgl-platform:2.9.4-nightly-20150209'
+    } else if (systemOs.contains("linux")) {
+        compile 'org.lwjgl.lwjgl:lwjgl_util:2.9.4-babric.1'
+        compile 'org.lwjgl.lwjgl:lwjgl:2.9.4-babric.1'
+        compile 'org.lwjgl.lwjgl:lwjgl-platform:2.9.4-babric.1'
+    }
+}
+
+if (systemOs.contains("mac")) {
+    configurations.configureEach {
+        resolutionStrategy {
+            dependencySubstitution {
+                substitute module('org.lwjgl.lwjgl:lwjgl_util:2.9.2-nightly-201408222') with module('org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209')
+                substitute module('org.lwjgl.lwjgl:lwjgl:2.9.2-nightly-201408222') with module('org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209')
+            }
+            force 'org.lwjgl.lwjgl:lwjgl-platform:2.9.4-nightly-20150209'
+        }
+    }
+} else if (systemOs.contains("linux")) {
+    configurations.configureEach {
+        resolutionStrategy {
+            dependencySubstitution {
+                substitute module('org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209') using module('org.lwjgl.lwjgl:lwjgl_util:2.9.4-babric.1')
+                substitute module('org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209') using module('org.lwjgl.lwjgl:lwjgl:2.9.4-babric.1')
+            }
+            force 'org.lwjgl.lwjgl:lwjgl-platform:2.9.4-babric.1'
+        }
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    def resourceDirs = sourceSets.main.resources.srcDirs
+    def mcmodInfo = resourceDirs.collect { new File(it, "mcmod.info") }.find { it.exists() }
+
+    from(resourceDirs) {
+        if (mcmodInfo) {
+            include "mcmod.info"
+            expand "version": project.version, "mcversion": project.minecraft.version
+            println "Included mcmod.info with version and mcversion replacement."
+        } else {
+            exclude "mcmod.info"
+            println "No mcmod.info found, skipping inclusion."
+        }
+    }
+
+    rename '(.+_at.cfg)', 'META-INF/$1'
+}
+
+shadowJar {
+    dependencies {}
+    configurations = [project.configurations.shade]
+    duplicatesStrategy DuplicatesStrategy.EXCLUDE
+    classifier ""
+    exclude 'LICENSE.txt'
+}
+
+reobf {
+    shadowJar {}
+}
+
+jar {
+    manifest.attributes(
+            "FMLCorePlugin": "me.ravriv.lite.MixinLoader",
+            "ForceLoadAsMod": true,
+            "TweakOrder": 0,
+            "ModSide": "CLIENT",
+            "FMLCorePluginContainsFMLMod": true,
+            "TweakClass": "org.spongepowered.asm.launch.MixinTweaker",
+            "MixinConfigs": "mixins.lglt.json",
+            "FMLAT": "lglt_at.cfg"
+    )
+}
+
+sourceSets {
+    main {
+        ext.refMap = "mixins.lglt.refmap.json"
+    }
+}
+
+tasks.register("buildAndMoveToMods") {
+    dependsOn("build")
+
+    doLast {
+        def libsDir = file("$buildDir/libs")
+        def jarFile = libsDir.listFiles().find {
+            it.name.endsWith(".jar") && !it.name.contains("-dev") && !it.name.contains("-sources")
+        }
+
+        if (!jarFile?.exists()) {
+            throw new GradleException("Jar not found in $libsDir.")
+        }
+
+        def modsDirPath = System.getenv("APPDATA") + "/.tlauncher/legacy/Minecraft/game/mods"
+        def modsDir = file(modsDirPath)
+        def target = new File(modsDir, jarFile.name)
+
+        if (!modsDir.exists()) {
+            throw new GradleException("Mods directory missing: $modsDirPath")
+        }
+
+        if (target.exists()) {
+            println "Deleting existing jar: ${target.name}"
+            int attempts = 10
+            while (target.exists() && !target.delete() && attempts-- > 0) {
+                println "Retry delete of ${target.name}... (${10 - attempts}/10)"
+                System.gc()
+                Thread.sleep(500)
+            }
+            if (target.exists()) {
+                throw new GradleException("Still failed to delete ${target.name}. Make sure minecraft is closed.")
+            }
+        }
+
+        println "Moving ${jarFile.name} to $modsDirPath"
+        if (!jarFile.renameTo(target)) {
+            throw new GradleException("Failed to move jar to $modsDirPath")
+        }
+
+        println "Done moving. Cleanup will run after build."
+    }
+}
+
+tasks.register("buildCopyToRunModsAndRun", Copy) {
+    dependsOn("build")
+    from "build/libs"
+    into "run/mods"
+    include "*.jar"
+}
+
+tasks.named("buildCopyToRunModsAndRun").configure {
+    finalizedBy("runClient")
+}
+
+tasks.register("forceCleanBuildTmp") {
+    doLast {
+        def tmpDir = file("$buildDir/tmp")
+        def compileJavaTmp = file("$buildDir/tmp/compileJava")
+
+        if (compileJavaTmp.exists()) {
+            println "Cleaning compileJava tmp directory safely..."
+            compileJavaTmp.eachFileRecurse { f ->
+                try {
+                    f.delete()
+                } catch (Exception e) {
+                    println "Could not delete ${f.name}: ${e.message}"
+                }
+            }
+            compileJavaTmp.deleteDir()
+        } else {
+            println "compileJava tmp directory does not exist. Skipping."
+        }
+
+        if (tmpDir.exists() && tmpDir.listFiles().length == 0) {
+            tmpDir.deleteDir()
+        }
+    }
+}
+
+tasks.named("buildAndMoveToMods").configure {
+    finalizedBy(tasks.named("forceCleanBuildTmp"))
+}
