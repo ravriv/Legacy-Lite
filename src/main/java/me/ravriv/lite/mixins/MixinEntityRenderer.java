@@ -29,7 +29,7 @@ public class MixinEntityRenderer {
     }
 
     @Inject(method = "setupFog", at = @At("TAIL"))
-    private void onSetupFog(int startCoords, float partialTicks, CallbackInfo ci) {
+    private void setupFog(int startCoords, float partialTicks, CallbackInfo ci) {
         GlStateManager.disableFog();
     }
 
