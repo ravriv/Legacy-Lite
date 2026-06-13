@@ -29,8 +29,10 @@ public class MixinEntityRenderer {
     }
 
     @Inject(method = "setupFog", at = @At("HEAD"), cancellable = true)
-    private void setupFog(int startCoords, float partialTicks, CallbackInfo ci) {
-        ci.cancel();
+    private void onSetupFog(int startCoords, float partialTicks, CallbackInfo ci) {
+        if (startCoords != -1) {
+            ci.cancel();
+        }
     }
 
     @Inject(method = "renderStreamIndicator", at = @At("HEAD"), cancellable = true)
