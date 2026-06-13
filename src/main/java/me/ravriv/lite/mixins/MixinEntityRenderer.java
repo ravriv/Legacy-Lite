@@ -28,11 +28,9 @@ public class MixinEntityRenderer {
         ci.cancel();
     }
 
-    @Inject(method = "setupFog", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "setupFog", at = @At("TAIL"))
     private void onSetupFog(int startCoords, float partialTicks, CallbackInfo ci) {
-        if (startCoords != -1) {
-            ci.cancel();
-        }
+        GlStateManager.disableFog();
     }
 
     @Inject(method = "renderStreamIndicator", at = @At("HEAD"), cancellable = true)
