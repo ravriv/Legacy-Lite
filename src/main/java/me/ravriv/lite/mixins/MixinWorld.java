@@ -28,12 +28,11 @@ public class MixinWorld {
         return isForced && !this.isRemote;
     }
 
-    @Redirect(method = "getCollidingBoundingBoxes", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getEntitiesWithinAABBExcludingEntity(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/AxisAlignedBB;)Ljava/util/List;"))
-    private List<Entity> getCollidingBoundingBoxes(World world, Entity entityIn, AxisAlignedBB aabb) {
+    @Inject(method = "getCollidingBoundingBoxes", at = @At("HEAD"), cancellable = true)
+    private void getCollidingBoundingBoxes(Entity entityIn, AxisAlignedBB bb, CallbackInfoReturnable<List<AxisAlignedBB>> cir) {
         if (entityIn instanceof EntityTNTPrimed || entityIn instanceof EntityFallingBlock || entityIn instanceof EntityItem || entityIn instanceof EntityFX) {
-            return Collections.emptyList();
+            cir.setReturnValue(Collections.emptyList());
         }
-        return world.getEntitiesWithinAABBExcludingEntity(entityIn, aabb);
     }
 
     @Inject(method = "checkLightFor", at = @At("HEAD"), cancellable = true)
