@@ -42,7 +42,8 @@ public class MixinMinecraft {
         if (thePlayer == null) return;
 
         boolean active = thePlayer.movementInput.moveForward != 0.0f || thePlayer.movementInput.moveStrafe != 0.0f || thePlayer.movementInput.jump || thePlayer.movementInput.sneak || mouseHelper.deltaX != 0 || mouseHelper.deltaY != 0;
-
+        EnhancementManager.getInstance().tick();
+        
         if (active) {
             if (AfkHandler.isAfk()) AfkHandler.setAfk(false);
             idle = 0;
