@@ -52,6 +52,8 @@ dependencies {
 
     compile 'org.jetbrains:annotations:24.0.1'
 
+    shade("com.github.ben-manes.caffeine:caffeine:2.9.3")
+
     if (systemOs.contains("mac")) {
         compile 'org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209'
         compile 'org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209'
