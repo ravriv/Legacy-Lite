@@ -24,6 +24,8 @@
     "MixinTexturedQuad",
     "MixinWorld",
     "accessors.ChunkAccessor",
+    "accessors.ConfigAccessor",
+    "accessors.CustomColorsAccessor",
     "accessors.MinecraftForgeClientAccessor"
   ],
   "client": [
