@@ -1,6 +1,6 @@
 package me.ravriv.lite.mixins;
 
-import me.ravriv.lite.handlers.ScanLimiter;
+import me.ravriv.lite.utils.ScanLimiter;
 import net.minecraft.client.renderer.chunk.VisGraph;
 import net.minecraft.util.EnumFacing;
 import org.spongepowered.asm.mixin.Mixin;
